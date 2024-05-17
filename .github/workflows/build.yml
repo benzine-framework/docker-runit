@@ -10,9 +10,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "marshall/**"
-      - ".github/workflows/marshall.yml"
 
 env:
   latest-stable-version: "focal"
@@ -61,9 +58,6 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - uses: actions/checkout@v4
-        with:
-          sparse-checkout: |
-            marshall
 
       - uses: docker/setup-qemu-action@v3
 
@@ -102,7 +96,7 @@ jobs:
         uses: docker/build-push-action@v5
         id: build
         with:
-          context: marshall
+          context: .
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
