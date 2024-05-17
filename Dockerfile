@@ -2,8 +2,8 @@
 FROM ubuntu:version
 
 LABEL maintainer="Matthew Baggett <matthew@baggett.me>" \
-      org.label-schema.vcs-url="https://github.com/benzine-framework/docker" \
-      org.opencontainers.image.source="https://github.com/benzine-framework/docker"
+      org.label-schema.vcs-url="https://github.com/benzine-framework/docker-runit" \
+      org.opencontainers.image.source="https://github.com/benzine-framework/docker-runit"
 
 ARG MARSHALL_VERSION
 ARG MARSHALL_BUILD_DATE
