@@ -1,0 +1,157 @@
+#!/bin/bash
+set -e
+# Define our pool of colours
+export COLOUR_BLACK='\e[30m'
+export COLOUR_RED='\e[31m'
+export COLOUR_GREEN='\e[32m'
+export COLOUR_YELLOW='\e[33m'
+export COLOUR_BLUE='\e[34m'
+export COLOUR_MAGENTA='\e[35m'
+export COLOUR_CYAN='\e[36m'
+export COLOUR_DIM_WHITE='\e[37m'
+export COLOUR_BRIGHT_BLACK='\e[90m'
+export COLOUR_BRIGHT_RED='\e[91m'
+export COLOUR_BRIGHT_GREEN='\e[92m'
+export COLOUR_BRIGHT_YELLOW='\e[93m'
+export COLOUR_BRIGHT_BLUE='\e[94m'
+export COLOUR_BRIGHT_MAGENTA='\e[95m'
+export COLOUR_BRIGHT_CYAN='\e[96m'
+export COLOUR_WHITE='\e[97m'
+export COLOUR_RESET='\e[0m'
+export COLOUR_BOLD='\e[1m'
+export COLOUR_UNDERLINE='\e[4m'
+
+# Add some aliases for colours
+export COLOUR_FAIL=$COLOUR_BRIGHT_RED
+export COLOUR_SUCCESS=$COLOUR_BRIGHT_GREEN
+
+export DEFAULT_TZ='Europe/London'
+
+export LC_ALL=C
+export DEBIAN_FRONTEND=noninteractive
+export DEBIAN_PRIORITY=critical
+export DEBCONF_NONINTERACTIVE_SEEN=true
+export APT_UPDATE='apt-get -yqq update'
+export APT_UPGRADE='apt-get -yqq upgrade '
+export APT_GET='apt-get -yqq install'
+export APT_REMOVE='apt-get -yqq remove'
+export APT_CLEAN='apt-get -yqq clean'
+export APT_AUTOREMOVE='apt-get -yqq autoremove'
+
+UBUNTU_VERSION=$(grep "VERSION=" /etc/os-release | cut -d'=' -f2 | sed -e 's/\"//g')
+UBUNTU_VERSION_CODENAME=$(grep "VERSION_CODENAME=" /etc/os-release | cut -d'=' -f2 | sed -e 's/\"//g')
+export UBUNTU_VERSION
+export UBUNTU_VERSION_CODENAME
+
+DU='du --exclude /proc'
+
+function disk_usage(){
+    $DU -hs  / | cut -f1
+}
+
+function indent(){
+    for ((n=0;n<${1};n++)); do
+        printf ' '
+    done
+}
+function title() {
+    indent 0
+	printf ' > %s' "$1"
+    if [ -n "$2" ]; then
+        printf ' %b%s%b' "$COLOUR_SUCCESS" "$2" "$COLOUR_RESET"
+    fi
+    printf '\n'
+}
+function subtitle(){
+    indent 1
+    title "$@"
+}
+function subsubtitle(){
+	indent 2
+    title "$@"
+}
+function install() {
+	for var in "$@"
+	do
+		printf '  > Installing: %b%s%b\n' "$COLOUR_SUCCESS" "$var" "$COLOUR_RESET"
+	done
+	# shellcheck disable=SC2086
+	$APT_GET "$@"
+}
+function update(){
+	printf '  > APT: %b%s%b\n' "$COLOUR_SUCCESS" "Update" "$COLOUR_RESET"
+	$APT_UPDATE
+}
+function upgrade(){
+	printf '  > APT: %b%s%b\n' "$COLOUR_SUCCESS" "Upgrade" "$COLOUR_RESET"
+	$APT_UPGRADE 2>/dev/null 1>&2
+}
+
+function remove() {
+	for var in "$@"
+    do
+      printf '  > Removing: %b%s%b\n' "$COLOUR_SUCCESS" "$var" "$COLOUR_RESET"
+    done
+    # shellcheck disable=SC2086
+    $APT_REMOVE "$@" 2>/dev/null 1>&2
+}
+
+function package_clean(){
+    title "Cleaning up packages";
+	$APT_AUTOREMOVE 2>/dev/null 1>&2;
+    $APT_CLEAN 2>/dev/null 1>&2;
+}
+
+function add_ppa() {
+	PPA=$([ "$1" == "-y" ] && echo "$2" || echo "$1")
+	PPA_NAME=${PPA/#ppa:/}
+
+    AUTHOR=$(echo  "$PPA_NAME" | cut -d'/' -f1);
+    PACKAGE=$(echo "$PPA_NAME" | cut -d'/' -f2);
+    SIGNING_KEY="/usr/share/keyrings/${AUTHOR}-${PACKAGE}.gpg"
+    FILENAME="${AUTHOR}-${PACKAGE}-${UBUNTU_VERSION_CODENAME}.list"
+    FULL_APT_SOURCES_PATH="/etc/apt/sources.list.d/$FILENAME.list"
+    if [ -f "$FULL_APT_SOURCES_PATH" ]; then
+        subtitle "Skipping existing PPA:" "$PPA_NAME";
+        return;
+    fi
+
+	subtitle "Adding PPA:" "$PPA_NAME";
+    KEY=$(curl --silent "https://launchpad.net/~$AUTHOR/+archive/ubuntu/$PACKAGE/" | grep "<code>" | tr -d ' ' | sed 's/<[^>]*>//g');
+    SEARCH=$(echo "$KEY" | cut -d'/' -f2);
+    PPA_PATH="https://ppa.launchpadcontent.net/${AUTHOR}/${PACKAGE}/ubuntu"
+
+    if [ ! -f "$SIGNING_KEY" ]; then
+        curl --silent "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x$SEARCH" | gpg --dearmor -o "$SIGNING_KEY"
+    fi
+
+    echo "deb       [signed-by=${SIGNING_KEY}] ${PPA_PATH} ${UBUNTU_VERSION_CODENAME} main" > "$FULL_APT_SOURCES_PATH";
+    echo "# deb-src [signed-by=${SIGNING_KEY}] ${PPA_PATH} ${UBUNTU_VERSION_CODENAME} main" >> "$FULL_APT_SOURCES_PATH";
+
+	update
+}
+function detect_package(){
+    PACKAGE_COUNT=$(dpkg --get-selections | grep -v deinstall | cut -f1 | grep -c "$1")
+    printf "  > There are %b%d%b packages matching %b%s%b\n" \
+        "$COLOUR_MAGENTA" "$PACKAGE_COUNT" "$COLOUR_RESET" \
+        "$COLOUR_BRIGHT_CYAN" "$1" "$COLOUR_RESET"
+    dpkg --get-selections | grep -v deinstall | cut -f1 | grep "$1"
+    printf "\n"
+}
+function largest_files_in_path(){
+    printf "Disk usage by %bfile%b size in %b%s%b:\n" \
+        "$COLOUR_BRIGHT_RED" "$COLOUR_RESET" \
+        "$COLOUR_MAGENTA" "$1" "$COLOUR_RESET"
+    # shellcheck disable=SC2012
+    $DU --max-depth=1 "$1" | sed '$ d' | sort -h | tac | head -n10
+    printf "\n"
+}
+
+function largest_directories_in_path(){
+    printf "Disk usage by %bdirectory%b size in %b%s%b:\n" \
+        "$COLOUR_BRIGHT_RED" "$COLOUR_RESET" \
+        "$COLOUR_MAGENTA" "$1" "$COLOUR_RESET"
+    # shellcheck disable=SC2012
+    $DU "$1" | sed '$ d' | sort -h | tac | head -n10
+    printf "\n"
+}

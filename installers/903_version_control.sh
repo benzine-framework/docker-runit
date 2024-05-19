@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 # shellcheck disable=SC1091,SC2164
 source /usr/local/lib/marshall_installer
 title "Installing version control tools"

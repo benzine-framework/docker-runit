@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 # shellcheck disable=SC1091,SC2312
 source /installers/config
 echo "force-unsafe-io" >/etc/dpkg/dpkg.cfg.d/force-unsafe-io
