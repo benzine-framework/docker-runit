@@ -32,12 +32,12 @@ jobs:
         ubuntu:
           - focal
           - jammy
-          - lunar
-          - mantic
+          #- lunar
+          #- mantic
           #- noble
           #- devel
-          - rolling
-          - latest
+          #- rolling
+          #- latest
         platform:
           - linux/amd64
           - linux/arm64
