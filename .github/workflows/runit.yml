@@ -32,7 +32,7 @@ jobs:
         ubuntu:
           - focal
           - jammy
-          - noble
+          #- noble
         platform:
           - linux/amd64
           - linux/arm64
@@ -132,12 +132,12 @@ jobs:
         ubuntu:
           - focal
           - jammy
-          - lunar
-          - mantic
+          #- lunar
+          #- mantic
           #- noble
           #- devel
-          - rolling
-          - latest
+          #- rolling
+          #- latest
     steps:
       - uses: docker/setup-buildx-action@v3
 
