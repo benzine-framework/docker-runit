@@ -115,7 +115,7 @@ jobs:
           touch "/tmp/digests/${digest#sha256:}"
 
       - name: "Build: Upload digest"
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: digests-${{ matrix.ubuntu }}
           path: /tmp/digests/*
