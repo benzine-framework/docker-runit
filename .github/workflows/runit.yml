@@ -32,7 +32,7 @@ jobs:
         ubuntu:
           - focal
           - jammy
-          #- noble
+          - noble
         platform:
           - linux/amd64
           - linux/arm64
